@@ -3,7 +3,7 @@ import foolbox
 from .models import PyTorchModel
 from .models import TensorFlowModel
 from .models import JAXModel
-from .models import FoolboxModel
+from .models import Foolbox2Model
 
 
 def accuracy(fmodel, inputs, labels):
@@ -29,7 +29,7 @@ def samples(
             import tensorflow as tf
 
             data_format = tf.keras.backend.image_data_format()
-        elif isinstance(model, FoolboxModel):
+        elif isinstance(model, Foolbox2Model):
             channel_axis = model.foolbox_model.channel_axis()
             if channel_axis == 1:
                 data_format = "channels_first"
@@ -65,7 +65,7 @@ def samples(
 
         images = np.asarray(images)
         labels = np.asarray(labels)
-    elif isinstance(model, FoolboxModel):
+    elif isinstance(model, Foolbox2Model):
         images = images
         labels = labels
     else:
@@ -73,8 +73,8 @@ def samples(
     return images, labels
 
 
-def flatten(x: ep.Tensor) -> ep.Tensor:
-    shape = (x.shape[0], -1)
+def flatten(x: ep.Tensor, keep=1) -> ep.Tensor:
+    shape = x.shape[:keep] + (-1,)
     return x.reshape(shape)
 
 

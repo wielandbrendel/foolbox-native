@@ -1,9 +1,10 @@
 import torch
-import torch.nn.functional as F
 import warnings
+from .base import Model
+from ..devutils import unwrap
 
 
-class PyTorchModel:
+class PyTorchModel(Model):
     def __init__(self, model, bounds, device=None, preprocessing=None):
         self._bounds = bounds
 
@@ -74,49 +75,10 @@ class PyTorchModel:
         return self._bounds
 
     def forward(self, inputs):
+        inputs, restore = unwrap(inputs)
         x = inputs
         assert x.device == self.device
         x = self._preprocess(x)
         x = self._model(x)
         assert x.ndim == 2
-        return x
-
-    def gradient(self, inputs, labels):
-        x = inputs.clone()
-        x.requires_grad_()
-        x_ = x
-        y = labels
-        assert x.device == self.device
-        assert y.device == self.device
-        x = self._preprocess(x)
-        x = self._model(x)
-        loss = F.cross_entropy(x, y)
-        loss.backward()
-        grad = x_.grad
-        assert grad.shape == x_.shape
-        return grad
-
-    def value_and_grad(self, f, has_aux=False):
-        def value_and_grad_(x, *args, **kwargs):
-            x = x.clone()
-            x.requires_grad_()
-            if has_aux:
-                loss, aux = f(x, *args, **kwargs)
-            else:
-                loss = f(x)
-            loss.backward()
-            grad = x.grad
-            assert grad.shape == x.shape
-            loss = loss.detach()
-            if isinstance(aux, torch.Tensor):
-                aux = aux.detach()
-            elif isinstance(aux, tuple):
-                aux = tuple(
-                    t.detach() if isinstance(t, torch.Tensor) else t for t in aux
-                )
-            if has_aux:
-                return (loss, aux), grad
-            else:
-                return loss, grad
-
-        return value_and_grad_
+        return restore(x)
